@@ -11,7 +11,7 @@ services:
       NODE_ENV: production
       BACKEND_PORT: ${BACKEND_PORT}
     ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"   # host এবং container same port
+      - "${BACKEND_PORT}:${BACKEND_PORT}"   # host and container same port
     networks:
       - backend
 
@@ -26,7 +26,7 @@ services:
       NODE_ENV: production
       PORT: ${GATEWAY_PORT}
     ports:
-      - "${GATEWAY_PORT}:${GATEWAY_PORT}"   # host এবং container same port
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"   # host and container same port
     depends_on:
       - backend
     networks:
