@@ -1,50 +1,136 @@
-# Docker Services:
-#   up - Start services (use: make up [service...] or make up MODE=prod, ARGS="--build" for options)
-#   down - Stop services (use: make down [service...] or make down MODE=prod, ARGS="--volumes" for options)
-#   build - Build containers (use: make build [service...] or make build MODE=prod)
-#   logs - View logs (use: make logs [service] or make logs SERVICE=backend, MODE=prod for production)
-#   restart - Restart services (use: make restart [service...] or make restart MODE=prod)
-#   shell - Open shell in container (use: make shell [service] or make shell SERVICE=gateway, MODE=prod, default: backend)
-#   ps - Show running containers (use MODE=prod for production)
-#
-# Convenience Aliases (Development):
-#   dev-up - Alias: Start development environment
-#   dev-down - Alias: Stop development environment
-#   dev-build - Alias: Build development containers
-#   dev-logs - Alias: View development logs
-#   dev-restart - Alias: Restart development services
-#   dev-shell - Alias: Open shell in backend container
-#   dev-ps - Alias: Show running development containers
-#   backend-shell - Alias: Open shell in backend container
-#   gateway-shell - Alias: Open shell in gateway container
-#   mongo-shell - Open MongoDB shell
-#
-# Convenience Aliases (Production):
-#   prod-up - Alias: Start production environment
-#   prod-down - Alias: Stop production environment
-#   prod-build - Alias: Build production containers
-#   prod-logs - Alias: View production logs
-#   prod-restart - Alias: Restart production services
-#
-# Backend:
-#   backend-build - Build backend TypeScript
-#   backend-install - Install backend dependencies
-#   backend-type-check - Type check backend code
-#   backend-dev - Run backend in development mode (local, not Docker)
-#
-# Database:
-#   db-reset - Reset MongoDB database (WARNING: deletes all data)
-#   db-backup - Backup MongoDB database
-#
-# Cleanup:
-#   clean - Remove containers and networks (both dev and prod)
-#   clean-all - Remove containers, networks, volumes, and images
-#   clean-volumes - Remove all volumes
-#
-# Utilities:
-#   status - Alias for ps
-#   health - Check service health
-#
-# Help:
-#   help - Display this help message
+# Default mode (dev or prod)
+MODE ?= dev
+ARGS ?=
+SERVICE ?= backend
 
+# Compose files
+DEV_COMPOSE = docker/compose.development.yaml
+PROD_COMPOSE = docker/compose.production.yaml
+
+ifeq ($(MODE),prod)
+  COMPOSE_FILE = $(PROD_COMPOSE)
+else
+  COMPOSE_FILE = $(DEV_COMPOSE)
+endif
+
+# -----------------------------
+# Docker Services
+# -----------------------------
+up:
+    docker compose -f $(COMPOSE_FILE) --env-file .env up $(ARGS)
+
+down:
+    docker compose -f $(COMPOSE_FILE) --env-file .env down $(ARGS)
+
+build:
+    docker compose -f $(COMPOSE_FILE) --env-file .env build $(ARGS)
+
+logs:
+    docker compose -f $(COMPOSE_FILE) --env-file .env logs -f $(SERVICE)
+
+restart:
+    docker compose -f $(COMPOSE_FILE) --env-file .env restart $(ARGS)
+
+shell:
+    docker compose -f $(COMPOSE_FILE) --env-file .env exec $(SERVICE) sh
+
+ps:
+    docker compose -f $(COMPOSE_FILE) --env-file .env ps
+
+# -----------------------------
+# Convenience Aliases
+# -----------------------------
+dev-up: MODE=dev
+dev-up: up
+
+dev-down: MODE=dev
+dev-down: down
+
+dev-build: MODE=dev
+dev-build: build
+
+dev-logs: MODE=dev
+dev-logs: logs
+
+dev-restart: MODE=dev
+dev-restart: restart
+
+dev-shell: MODE=dev
+dev-shell: shell
+
+dev-ps: MODE=dev
+dev-ps: ps
+
+backend-shell:
+    docker compose -f $(COMPOSE_FILE) --env-file .env exec backend sh
+
+gateway-shell:
+    docker compose -f $(COMPOSE_FILE) --env-file .env exec gateway sh
+
+mongo-shell:
+    docker compose -f $(COMPOSE_FILE) --env-file .env exec mongo mongosh
+
+prod-up: MODE=prod
+prod-up: up
+
+prod-down: MODE=prod
+prod-down: down
+
+prod-build: MODE=prod
+prod-build: build
+
+prod-logs: MODE=prod
+prod-logs: logs
+
+prod-restart: MODE=prod
+prod-restart: restart
+
+# -----------------------------
+# Backend Utilities
+# -----------------------------
+backend-build:
+    npm run build --prefix backend
+
+backend-install:
+    npm install --prefix backend
+
+backend-type-check:
+    npm run type-check --prefix backend
+
+backend-dev:
+    npm run dev --prefix backend
+
+# -----------------------------
+# Database Utilities
+# -----------------------------
+db-reset:
+    docker compose -f $(COMPOSE_FILE) --env-file .env down -v
+    docker volume rm cuet-cse-fest-devops-hackathon-preli_mongo_data || true
+
+db-backup:
+    docker compose -f $(COMPOSE_FILE) --env-file .env exec mongo mongodump --out /data/db/backup
+
+# -----------------------------
+# Cleanup
+# -----------------------------
+clean:
+    docker compose -f $(DEV_COMPOSE) down
+    docker compose -f $(PROD_COMPOSE) down
+
+clean-all:
+    docker system prune -af
+    docker volume prune -f
+
+clean-volumes:
+    docker volume prune -f
+
+# -----------------------------
+# Utilities
+# -----------------------------
+status: ps
+
+health:
+    docker compose -f $(COMPOSE_FILE) --env-file .env ps
+
+help:
+    @grep -E '^#' Makefile
